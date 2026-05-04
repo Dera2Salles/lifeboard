@@ -21,9 +21,9 @@ class Interaction {
 
   String? lessonsLearned;
 
-  late DateTime date;
+  DateTime date = DateTime.now();
 
-  late DateTime createdAt;
+  DateTime createdAt = DateTime.now();
 
   @ignore
   String get typeIcon {

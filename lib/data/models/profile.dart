@@ -19,5 +19,5 @@ class Profile {
   String? personalityType;      // MBTI / introverti / extraverti
   String? notes;
 
-  late DateTime updatedAt;
+  DateTime updatedAt = DateTime.now();
 }

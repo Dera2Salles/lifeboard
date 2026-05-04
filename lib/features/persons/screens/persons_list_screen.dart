@@ -6,6 +6,7 @@ import '../providers/persons_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/person.dart';
 import '../../../shared/widgets/person_card.dart';
+import '../../../core/utils/icon_utils.dart';
 
 class PersonsListScreen extends ConsumerStatefulWidget {
   const PersonsListScreen({super.key});
@@ -91,7 +92,7 @@ class _PersonsListScreenState extends ConsumerState<PersonsListScreen> {
             const SizedBox(height: 12),
             // Filter chips
             SizedBox(
-              height: 36,
+              height: 38,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -104,6 +105,7 @@ class _PersonsListScreenState extends ConsumerState<PersonsListScreen> {
                   ...RelationType.values.map(
                     (t) => _FilterChip(
                       label: _typeLabel(t),
+                      icon: IconUtils.getIconForRelation(t.name),
                       selected: _selectedFilter == t,
                       color: _typeColor(t),
                       onTap: () => setState(() => _selectedFilter = t),
@@ -140,11 +142,38 @@ class _PersonsListScreenState extends ConsumerState<PersonsListScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     itemCount: filtered.length,
                     separatorBuilder: (context, index) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) => PersonCard(
-                      person: filtered[index],
-                      animationIndex: index,
-                      onTap: () => context.push('/persons/${filtered[index].id}'),
-                    ),
+                    itemBuilder: (context, index) {
+                      final person = filtered[index];
+                      return Dismissible(
+                        key: Key('person_${person.id}'),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(16)),
+                          child: const Icon(Icons.person_remove_rounded, color: Colors.white),
+                        ),
+                        confirmDismiss: (direction) async {
+                          return await showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Supprimer ?'),
+                              content: Text('Veux-tu vraiment supprimer ${person.name} et toutes ses données ?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Supprimer', style: TextStyle(color: AppColors.error))),
+                              ],
+                            ),
+                          );
+                        },
+                        onDismissed: (_) => ref.read(personsProvider.notifier).deletePerson(person.id),
+                        child: PersonCard(
+                          person: person,
+                          animationIndex: index,
+                          onTap: () => context.push('/persons/${person.id}'),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -161,50 +190,38 @@ class _PersonsListScreenState extends ConsumerState<PersonsListScreen> {
 
   String _typeLabel(RelationType t) {
     switch (t) {
-      case RelationType.ami:
-        return '👫 Ami';
-      case RelationType.famille:
-        return '👨‍👩‍👧 Famille';
-      case RelationType.partenaire:
-        return '❤️ Partenaire';
-      case RelationType.collegue:
-        return '💼 Collègue';
-      case RelationType.mentor:
-        return '🧠 Mentor';
-      case RelationType.connaissance:
-        return '🤝 Connaissance';
-      case RelationType.autre:
-        return '✨ Autre';
+      case RelationType.ami: return 'Ami';
+      case RelationType.famille: return 'Famille';
+      case RelationType.partenaire: return 'Partenaire';
+      case RelationType.collegue: return 'Collègue';
+      case RelationType.mentor: return 'Mentor';
+      case RelationType.connaissance: return 'Connaissance';
+      case RelationType.autre: return 'Autre';
     }
   }
 
   Color _typeColor(RelationType t) {
     switch (t) {
-      case RelationType.ami:
-        return AppColors.relationFriend;
-      case RelationType.famille:
-        return AppColors.relationFamily;
-      case RelationType.partenaire:
-        return AppColors.relationPartner;
-      case RelationType.collegue:
-        return AppColors.relationColleague;
-      case RelationType.mentor:
-        return AppColors.relationMentor;
-      case RelationType.connaissance:
-      case RelationType.autre:
-        return AppColors.relationOther;
+      case RelationType.ami: return AppColors.relationFriend;
+      case RelationType.famille: return AppColors.relationFamily;
+      case RelationType.partenaire: return AppColors.relationPartner;
+      case RelationType.collegue: return AppColors.relationColleague;
+      case RelationType.mentor: return AppColors.relationMentor;
+      default: return AppColors.relationOther;
     }
   }
 }
 
 class _FilterChip extends StatelessWidget {
   final String label;
+  final IconData? icon;
   final bool selected;
   final Color? color;
   final VoidCallback onTap;
 
   const _FilterChip({
     required this.label,
+    this.icon,
     required this.selected,
     this.color,
     required this.onTap,
@@ -220,20 +237,29 @@ class _FilterChip extends StatelessWidget {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? c.withValues(alpha: 0.2) : AppColors.surface2,
+          color: selected ? c.withValues(alpha: 0.15) : AppColors.surface2,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected ? c : AppColors.divider,
             width: selected ? 1.5 : 1,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-            color: selected ? c : AppColors.textSecondary,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: selected ? c : AppColors.textSecondary),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                color: selected ? c : AppColors.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -252,27 +278,25 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            hasFilter ? '🔍' : '👥',
-            style: const TextStyle(fontSize: 48),
+          Icon(
+            hasFilter ? Icons.search_off_rounded : Icons.people_outline_rounded,
+            size: 64, color: AppColors.textMuted,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
-            hasFilter
-                ? 'Aucune personne trouvée'
-                : 'Ta liste est vide',
+            hasFilter ? 'Aucune personne trouvée' : 'Ta liste est vide',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 8),
           Text(
             hasFilter
-                ? 'Essaie un autre filtre'
+                ? 'Essaie un autre filtre ou une autre recherche'
                 : 'Commence à ajouter des personnes importantes dans ta vie',
             style: Theme.of(context).textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),
           if (!hasFilter) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: onAddTap,
               icon: const Icon(Icons.person_add_rounded),

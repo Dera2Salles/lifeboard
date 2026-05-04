@@ -43,8 +43,10 @@ class PersonsNotifier extends AsyncNotifier<List<Person>> {
   }
 
   Future<void> deletePerson(int id) async {
+    if (state.hasValue) {
+      state = AsyncValue.data(state.value!.where((p) => p.id != id).toList());
+    }
     await _repo.deletePerson(id);
-    await refresh();
   }
 }
 
@@ -111,8 +113,10 @@ class PersonContextsNotifier extends FamilyAsyncNotifier<List<ContextEntry>, int
   }
 
   Future<void> deleteContext(int id) async {
+    if (state.hasValue) {
+      state = AsyncValue.data(state.value!.where((c) => c.id != id).toList());
+    }
     await ContextRepository().deleteContext(id);
-    ref.invalidateSelf();
   }
 }
 
@@ -130,6 +134,13 @@ class PersonEmotionsNotifier extends FamilyAsyncNotifier<List<EmotionLog>, int> 
     await EmotionRepository().saveEmotion(log);
     ref.invalidateSelf();
   }
+
+  Future<void> deleteEmotion(int id) async {
+    if (state.hasValue) {
+      state = AsyncValue.data(state.value!.where((e) => e.id != id).toList());
+    }
+    await EmotionRepository().deleteEmotion(id);
+  }
 }
 
 final personInteractionsProvider = AsyncNotifierProvider.family<PersonInteractionsNotifier, List<Interaction>, int>(
@@ -145,5 +156,12 @@ class PersonInteractionsNotifier extends FamilyAsyncNotifier<List<Interaction>, 
   Future<void> addInteraction(Interaction interaction) async {
     await InteractionRepository().saveInteraction(interaction);
     ref.invalidateSelf();
+  }
+
+  Future<void> deleteInteraction(int id) async {
+    if (state.hasValue) {
+      state = AsyncValue.data(state.value!.where((i) => i.id != id).toList());
+    }
+    await InteractionRepository().deleteInteraction(id);
   }
 }

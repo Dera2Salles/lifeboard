@@ -54,12 +54,27 @@ class HabitsScreen extends ConsumerWidget {
                       ),
                       SliverList(
                         delegate: SliverChildBuilderDelegate(
-                          (context, index) => _HabitListTile(
-                            habit: habits[index],
-                            completed: logs[habits[index].id]?.completed == true,
-                            onToggle: () => ref.read(habitsProvider.notifier).toggleToday(habits[index].id),
-                            index: index,
-                          ),
+                          (context, index) {
+                            final habit = habits[index];
+                            return Dismissible(
+                              key: Key('habit_${habit.id}'),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                margin: const EdgeInsets.only(bottom: 10),
+                                decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(14)),
+                                child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+                              ),
+                              onDismissed: (_) => ref.read(habitsProvider.notifier).deleteHabit(habit.id),
+                              child: _HabitListTile(
+                                habit: habit,
+                                completed: logs[habit.id]?.completed == true,
+                                onToggle: () => ref.read(habitsProvider.notifier).toggleToday(habit.id),
+                                index: index,
+                              ),
+                            );
+                          },
                           childCount: habits.length,
                         ),
                       ),

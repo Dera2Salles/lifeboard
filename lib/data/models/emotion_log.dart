@@ -15,7 +15,7 @@ class EmotionLog {
 
   String? context;        // Dans quel contexte
 
-  late DateTime date;
+  DateTime date = DateTime.now();
 
   String? note;           // Note libre
 

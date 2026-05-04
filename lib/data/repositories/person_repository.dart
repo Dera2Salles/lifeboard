@@ -59,6 +59,7 @@ class PersonRepository {
   }
 
   Future<void> saveProfile(Profile profile) async {
+    profile.updatedAt = DateTime.now();
     await _db.writeTxn(() async {
       await _db.profiles.put(profile);
     });

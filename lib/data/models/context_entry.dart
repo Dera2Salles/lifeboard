@@ -17,9 +17,9 @@ class ContextEntry {
   @Index()
   late int importance; // 1-5
 
-  late DateTime date;
+  DateTime date = DateTime.now();
 
   List<String> tags = [];
 
-  late DateTime createdAt;
+  DateTime createdAt = DateTime.now();
 }

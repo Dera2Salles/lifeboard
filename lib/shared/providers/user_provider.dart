@@ -4,35 +4,28 @@ import '../../data/repositories/user_repository.dart';
 
 final userRepositoryProvider = Provider((ref) => UserRepository());
 
-final userProvider = FutureProvider<User>((ref) async {
-  final repo = ref.watch(userRepositoryProvider);
-  return await repo.getOrCreateUser();
-});
+/// The single source of truth for the User profile.
+/// Watching this provider will trigger a rebuild whenever the user is saved.
+final userProvider = AsyncNotifierProvider<UserNotifier, User>(UserNotifier.new);
 
-class UserNotifier extends FamilyAsyncNotifier<User, void> {
+class UserNotifier extends AsyncNotifier<User> {
   @override
-  Future<User> build(void arg) async {
-    return await ref.watch(userRepositoryProvider).getOrCreateUser();
+  Future<User> build() async {
+    final repo = ref.watch(userRepositoryProvider);
+    return await repo.getOrCreateUser();
   }
 
-  Future<void> updateUser(User user) async {
+  Future<void> saveUser(User user) async {
+    // We update the local state immediately for a responsive UI
+    state = AsyncData(user);
+    // Then we persist to Isar
     await ref.read(userRepositoryProvider).saveUser(user);
+    // Invalidate is not strictly needed if we updated state, 
+    // but ensures consistency with potential DB side-effects.
     ref.invalidateSelf();
   }
 }
 
-// Alternatively, a simpler notifier if needed
-final userUpdateProvider = AsyncNotifierProvider<UserNotifierSimple, User>(() => UserNotifierSimple());
-
-class UserNotifierSimple extends AsyncNotifier<User> {
-  @override
-  Future<User> build() async {
-    return await ref.watch(userRepositoryProvider).getOrCreateUser();
-  }
-
-  Future<void> saveUser(User user) async {
-    state = const AsyncValue.loading();
-    await ref.read(userRepositoryProvider).saveUser(user);
-    state = AsyncValue.data(user);
-  }
-}
+// Keep a reference to the update provider for compatibility with existing code,
+// but point it to the same logic.
+final userUpdateProvider = userProvider;

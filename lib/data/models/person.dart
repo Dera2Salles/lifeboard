@@ -29,7 +29,7 @@ class Person {
 
   String? notes;
 
-  late DateTime createdAt;
+  DateTime createdAt = DateTime.now();
 
   @ignore
   String get relationTypeLabel {

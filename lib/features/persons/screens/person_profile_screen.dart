@@ -326,7 +326,16 @@ class _ContextsTab extends ConsumerWidget {
               Text('Aucun contexte pour le moment', style: Theme.of(context).textTheme.bodyMedium),
             ])))
           else
-            ...contexts.map((ctx) => Padding(padding: const EdgeInsets.only(bottom: 12), child: ContextCard(entry: ctx))),
+            ...contexts.map((ctx) => Padding(
+              padding: const EdgeInsets.only(bottom: 12), 
+              child: Dismissible(
+                key: Key('ctx_${ctx.id}'),
+                direction: DismissDirection.endToStart,
+                background: _buildDeleteBackground(),
+                onDismissed: (_) => ref.read(personContextsProvider(personId).notifier).deleteContext(ctx.id),
+                child: ContextCard(entry: ctx),
+              ),
+            )),
         ],
       ),
     );
@@ -395,16 +404,22 @@ class _EmotionsTab extends ConsumerWidget {
           else
             ...logs.map((log) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
-                child: Row(children: [
-                  EmotionChip(emotion: log.emotion, intensity: log.intensity),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(log.note ?? log.context ?? '', style: Theme.of(context).textTheme.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
-                  const SizedBox(width: 8),
-                  Text(DateFormat('dd/MM', 'fr_FR').format(log.date), style: Theme.of(context).textTheme.labelSmall),
-                ]),
+              child: Dismissible(
+                key: Key('emotion_${log.id}'),
+                direction: DismissDirection.endToStart,
+                background: _buildDeleteBackground(),
+                onDismissed: (_) => ref.read(personEmotionsProvider(personId).notifier).deleteEmotion(log.id),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
+                  child: Row(children: [
+                    EmotionChip(emotion: log.emotion, intensity: log.intensity),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(log.note ?? log.context ?? '', style: Theme.of(context).textTheme.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 8),
+                    Text(DateFormat('dd/MM', 'fr_FR').format(log.date), style: Theme.of(context).textTheme.labelSmall),
+                  ]),
+                ),
               ),
             )),
         ],
@@ -486,7 +501,16 @@ class _InteractionsTab extends ConsumerWidget {
               Text('Aucune interaction récente', style: Theme.of(context).textTheme.bodyMedium),
             ])))
           else
-            RelationTimeline(interactions: interactions),
+            ...interactions.map((i) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Dismissible(
+                key: Key('interaction_${i.id}'),
+                direction: DismissDirection.endToStart,
+                background: _buildDeleteBackground(),
+                onDismissed: (_) => ref.read(personInteractionsProvider(personId).notifier).deleteInteraction(i.id),
+                child: RelationTimeline(interactions: [i]), // Single item for the timeline row
+              ),
+            )),
         ],
       ),
     );
@@ -816,4 +840,13 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       ],
     ));
   }
+}
+
+Widget _buildDeleteBackground() {
+  return Container(
+    alignment: Alignment.centerRight,
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+    child: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+  );
 }
