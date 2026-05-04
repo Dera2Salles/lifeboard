@@ -1,0 +1,50 @@
+name: lifeboard
+description: "LifeBoard — Ton Miroir de Vie. Tableau de bord pour gérer tes relations, habitudes et progression personnelle."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Icons
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Navigation
+  go_router: ^14.6.2
+
+  # Database locale (Isar)
+  isar: ^3.1.0+1
+  isar_flutter_libs: ^3.1.0+1
+  path_provider: ^2.1.5
+
+  # Charts & visualisation
+  fl_chart: ^0.69.0
+
+  # UI & animations
+  flutter_animate: ^4.5.0
+  google_fonts: ^6.2.1
+
+  # Utilitaires
+  intl: ^0.19.0
+  uuid: ^4.5.1
+  shared_preferences: ^2.3.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # Isar code generation
+  isar_generator: ^3.1.0+1
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true
