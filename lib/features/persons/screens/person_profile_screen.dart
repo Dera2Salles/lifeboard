@@ -11,14 +11,12 @@ import '../../../data/models/emotion_log.dart';
 import '../../../data/models/interaction.dart';
 import '../../../data/models/context_entry.dart';
 import '../../../data/models/relationship_score.dart';
-import '../../../data/repositories/emotion_repository.dart';
-import '../../../data/repositories/interaction_repository.dart';
-import '../../../data/repositories/context_repository.dart';
 import '../../../shared/widgets/radar_chart_widget.dart';
 import '../../../shared/widgets/score_gauge.dart';
 import '../../../shared/widgets/emotion_chip.dart';
 import '../../../shared/widgets/relation_timeline.dart';
 import '../../../shared/widgets/context_card.dart';
+import '../../../core/utils/icon_utils.dart';
 
 class PersonProfileScreen extends ConsumerStatefulWidget {
   final int personId;
@@ -67,7 +65,9 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen>
       data: (person) {
         if (person == null) {
           return Scaffold(body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('😕', style: TextStyle(fontSize: 48)),
+            const Icon(Icons.person_off_rounded, size: 64, color: AppColors.textMuted),
+            const SizedBox(height: 16),
+            Text('Personne introuvable', style: Theme.of(context).textTheme.titleMedium),
             TextButton(onPressed: () => context.pop(), child: const Text('Retour')),
           ])));
         }
@@ -76,38 +76,38 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen>
           body: NestedScrollView(
             headerSliverBuilder: (context, _) => [
               SliverAppBar(
-                expandedHeight: 200,
+                expandedHeight: 220,
                 pinned: true,
                 backgroundColor: AppColors.background,
-                leading: IconButton(icon: const Icon(Icons.arrow_back_ios_rounded), onPressed: () => context.pop()),
-                actions: [IconButton(icon: const Icon(Icons.edit_rounded), onPressed: () {})],
+                leading: IconButton(icon: const Icon(Icons.arrow_back_ios_rounded, size: 20), onPressed: () => context.pop()),
+                actions: [IconButton(icon: const Icon(Icons.edit_rounded, size: 20), onPressed: () {})],
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [color.withValues(alpha: 0.3), AppColors.background],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                    ),
+                    color: AppColors.background,
                     child: SafeArea(
                       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 20),
                         Container(
                           width: 80, height: 80,
                           decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.2),
+                            color: color.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
-                            border: Border.all(color: color.withValues(alpha: 0.6), width: 2.5),
+                            border: Border.all(color: color.withValues(alpha: 0.4), width: 2),
                           ),
-                          child: Center(child: Text(person.avatarEmoji, style: const TextStyle(fontSize: 38))),
+                          child: Center(
+                            child: Icon(
+                              IconUtils.getIconForRelation(person.relationType.name),
+                              size: 40,
+                              color: color,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         Text(person.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(color: color.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+                          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
                           child: Text(person.relationTypeLabel, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
                         ),
                       ]),
@@ -124,18 +124,26 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen>
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  tabs: const [Tab(text: '🧠 Âme'), Tab(text: '📌 Contextes'), Tab(text: '💫 Émotions'), Tab(text: '💬 Interactions'), Tab(text: '📊 Relation')],
+                  indicatorColor: AppColors.primary,
+                  indicatorSize: TabBarIndicatorSize.label,
+                  tabs: const [
+                    Tab(child: Row(children: [Icon(Icons.psychology_outlined, size: 16), SizedBox(width: 6), Text('Âme')])),
+                    Tab(child: Row(children: [Icon(Icons.push_pin_outlined, size: 16), SizedBox(width: 6), Text('Contextes')])),
+                    Tab(child: Row(children: [Icon(Icons.auto_awesome_outlined, size: 16), SizedBox(width: 6), Text('Émotions')])),
+                    Tab(child: Row(children: [Icon(Icons.chat_bubble_outline_rounded, size: 16), SizedBox(width: 6), Text('Interactions')])),
+                    Tab(child: Row(children: [Icon(Icons.analytics_outlined, size: 16), SizedBox(width: 6), Text('Relation')])),
+                  ],
                 ),
               ),
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _SoulTab(profile: profileAsync),
+                    _SoulTab(personId: widget.personId, profile: profileAsync),
                     _ContextsTab(personId: widget.personId),
                     _EmotionsTab(personId: widget.personId),
                     _InteractionsTab(personId: widget.personId),
-                    _RelationTab(scoreAsync: scoreAsync),
+                    _RelationTab(personId: widget.personId, scoreAsync: scoreAsync),
                   ],
                 ),
               ),
@@ -148,89 +156,137 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen>
 }
 
 // ── Soul Tab ─────────────────────────────────────────────────────────────────
-class _SoulTab extends StatelessWidget {
+class _SoulTab extends ConsumerWidget {
+  final int personId;
   final AsyncValue<Profile?> profile;
-  const _SoulTab({required this.profile});
+  const _SoulTab({required this.personId, required this.profile});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return profile.when(
       loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
       error: (e, _) => Center(child: Text('$e')),
       data: (p) => ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          if (p != null && p.desires.isNotEmpty)
-            RadarChartWidget(
-              data: buildProfileRadarData(desires: p.desires, dreams: p.dreams, fears: p.fears, loves: p.loves, dislikes: p.dislikes, values: p.values),
-              title: 'Profil Psychologique',
+          if (p != null)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.divider),
+              ),
+              child: RadarChartWidget(
+                data: buildProfileRadarData(desires: p.desires, dreams: p.dreams, fears: p.fears, loves: p.loves, dislikes: p.dislikes, values: p.values),
+                title: 'Profil Psychologique',
+              ),
             ),
-          const SizedBox(height: 20),
-          _ProfileSection(title: '✨ Désirs', items: p?.desires ?? [], color: AppColors.primary, emptyHint: 'Que désire-t-il/elle ?'),
-          _ProfileSection(title: '🌟 Rêves', items: p?.dreams ?? [], color: AppColors.warning, emptyHint: 'Ses grands rêves...'),
-          _ProfileSection(title: '😨 Peurs', items: p?.fears ?? [], color: AppColors.secondary, emptyHint: 'Ce qui l\'effraie...'),
-          _ProfileSection(title: '❤️ Il/Elle aime', items: p?.loves ?? [], color: AppColors.accent, emptyHint: 'Ses passions...'),
-          _ProfileSection(title: '🚫 N\'aime pas', items: p?.dislikes ?? [], color: AppColors.error, emptyHint: 'Ce qu\'il/elle déteste...'),
-          _ProfileSection(title: '🏛️ Valeurs', items: p?.values ?? [], color: AppColors.info, emptyHint: 'Ce qui est important...'),
-          if (p?.loveLanguage != null) _InfoTile(icon: '💝', label: 'Langage d\'amour', value: p!.loveLanguage!),
-          if (p?.personalityType != null) _InfoTile(icon: '🧠', label: 'Personnalité', value: p!.personalityType!),
+          const SizedBox(height: 24),
+          _ProfileSection(icon: Icons.auto_fix_high_rounded, title: 'Désirs', items: p?.desires ?? [], color: AppColors.primary, emptyHint: 'Que désire-t-il/elle ?'),
+          _ProfileSection(icon: Icons.star_outline_rounded, title: 'Rêves', items: p?.dreams ?? [], color: AppColors.warning, emptyHint: 'Ses grands rêves...'),
+          _ProfileSection(icon: Icons.warning_amber_rounded, title: 'Peurs', items: p?.fears ?? [], color: AppColors.secondary, emptyHint: 'Ce qui l\'effraie...'),
+          _ProfileSection(icon: Icons.favorite_border_rounded, title: 'Il/Elle aime', items: p?.loves ?? [], color: AppColors.accent, emptyHint: 'Ses passions...'),
+          _ProfileSection(icon: Icons.block_flipped, title: 'N\'aime pas', items: p?.dislikes ?? [], color: AppColors.error, emptyHint: 'Ce qu\'il/elle déteste...'),
+          _ProfileSection(icon: Icons.account_balance_outlined, title: 'Valeurs', items: p?.values ?? [], color: AppColors.info, emptyHint: 'Ce qui est important...'),
+          
+          if (p?.loveLanguage != null) _InfoTile(icon: Icons.favorite_rounded, label: 'Langage d\'amour', value: p!.loveLanguage!, color: AppColors.secondary),
+          if (p?.personalityType != null) _InfoTile(icon: Icons.psychology_rounded, label: 'Personnalité', value: p!.personalityType!, color: AppColors.primary),
+          
           const SizedBox(height: 16),
-          ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.edit_rounded, size: 16), label: const Text('Modifier le profil')),
+          OutlinedButton.icon(
+            onPressed: () => _showEditProfileSheet(context, ref, personId, p),
+            icon: const Icon(Icons.edit_rounded, size: 16),
+            label: const Text('Modifier le profil'),
+          ),
         ],
+      ),
+    );
+  }
+
+  void _showEditProfileSheet(BuildContext context, WidgetRef ref, int personId, Profile? profile) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => _EditProfileSheet(
+        personId: personId,
+        profile: profile,
+        onSave: (p) async {
+          await ref.read(personProfileProvider(personId).notifier).saveProfile(p);
+          if (context.mounted) Navigator.pop(ctx);
+        },
       ),
     );
   }
 }
 
 class _ProfileSection extends StatelessWidget {
+  final IconData icon;
   final String title;
   final List<String> items;
   final Color color;
   final String emptyHint;
-  const _ProfileSection({required this.title, required this.items, required this.color, required this.emptyHint});
+  const _ProfileSection({required this.icon, required this.title, required this.items, required this.color, required this.emptyHint});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 8),
-          if (items.isEmpty)
-            Text(emptyHint, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic))
-          else
-            Wrap(
-              spacing: 6, runSpacing: 6,
-              children: items.map((item) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withValues(alpha: 0.3))),
-                child: Text(item, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w500)),
-              )).toList(),
-            ),
-        ],
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 8),
+              Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+            ]),
+            const SizedBox(height: 12),
+            if (items.isEmpty)
+              Text(emptyHint, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic))
+            else
+              Wrap(
+                spacing: 6, runSpacing: 6,
+                children: items.map((item) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withValues(alpha: 0.2))),
+                  child: Text(item, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w500)),
+                )).toList(),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _InfoTile extends StatelessWidget {
-  final String icon, label, value;
-  const _InfoTile({required this.icon, required this.label, required this.value});
+  final IconData icon;
+  final String label, value;
+  final Color color;
+  const _InfoTile({required this.icon, required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.divider)),
       child: Row(children: [
-        Text(icon, style: const TextStyle(fontSize: 18)),
-        const SizedBox(width: 10),
+        Icon(icon, size: 24, color: color),
+        const SizedBox(width: 14),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label, style: Theme.of(context).textTheme.labelSmall),
-          Text(value, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 2),
+          Text(value, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
         ]),
       ]),
     );
@@ -238,95 +294,137 @@ class _InfoTile extends StatelessWidget {
 }
 
 // ── Contexts Tab ──────────────────────────────────────────────────────────────
-class _ContextsTab extends StatelessWidget {
+class _ContextsTab extends ConsumerWidget {
   final int personId;
   const _ContextsTab({required this.personId});
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<ContextEntry>>(
-      future: ContextRepository().getContextsForPerson(personId),
-      builder: (context, snapshot) {
-        final contexts = snapshot.data ?? [];
-        return ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Row(children: [
-              Text('${contexts.length} contextes', style: Theme.of(context).textTheme.bodyMedium),
-              const Spacer(),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, size: 14),
-                label: const Text('Ajouter'),
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-              ),
-            ]),
-            const SizedBox(height: 16),
-            if (contexts.isEmpty)
-              Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(children: [
-                const Text('📌', style: TextStyle(fontSize: 40)),
-                const SizedBox(height: 8),
-                Text('Aucun contexte', style: Theme.of(context).textTheme.bodyMedium),
-              ])))
-            else
-              ...contexts.map((ctx) => Padding(padding: const EdgeInsets.only(bottom: 10), child: ContextCard(entry: ctx))),
-          ],
-        );
-      },
+  Widget build(BuildContext context, WidgetRef ref) {
+    final contextsAsync = ref.watch(personContextsProvider(personId));
+
+    return contextsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      error: (e, _) => Center(child: Text('$e')),
+      data: (contexts) => ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Row(children: [
+            Text('${contexts.length} contextes', style: Theme.of(context).textTheme.titleSmall),
+            const Spacer(),
+            ElevatedButton.icon(
+              onPressed: () => _showAddContextSheet(context, ref, personId),
+              icon: const Icon(Icons.add, size: 14),
+              label: const Text('Ajouter'),
+              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+            ),
+          ]),
+          const SizedBox(height: 20),
+          if (contexts.isEmpty)
+            Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(children: [
+              const Icon(Icons.push_pin_outlined, size: 48, color: AppColors.textMuted),
+              const SizedBox(height: 12),
+              Text('Aucun contexte pour le moment', style: Theme.of(context).textTheme.bodyMedium),
+            ])))
+          else
+            ...contexts.map((ctx) => Padding(padding: const EdgeInsets.only(bottom: 12), child: ContextCard(entry: ctx))),
+        ],
+      ),
+    );
+  }
+
+  void _showAddContextSheet(BuildContext context, WidgetRef ref, int personId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => _AddContextSheet(
+        personId: personId,
+        onSave: (entry) async {
+          await ref.read(personContextsProvider(personId).notifier).addContext(entry);
+          if (context.mounted) Navigator.pop(ctx);
+        },
+      ),
     );
   }
 }
 
 // ── Emotions Tab ──────────────────────────────────────────────────────────────
-class _EmotionsTab extends StatelessWidget {
+class _EmotionsTab extends ConsumerWidget {
   final int personId;
   const _EmotionsTab({required this.personId});
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<EmotionLog>>(
-      future: EmotionRepository().getRecentEmotions(personId, limit: 50),
-      builder: (context, snapshot) {
-        final logs = snapshot.data ?? [];
-        return ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            if (logs.isNotEmpty) ...[
-              Text('Évolution', style: Theme.of(context).textTheme.titleSmall),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final emotionsAsync = ref.watch(personEmotionsProvider(personId));
+
+    return emotionsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      error: (e, _) => Center(child: Text('$e')),
+      data: (logs) => ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          if (logs.isNotEmpty) ...[
+            Text('Évolution de l\'intensité', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 16),
+            Container(
+              height: 160,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.divider)),
+              child: _EmotionChart(logs: logs),
+            ),
+            const SizedBox(height: 24),
+          ],
+          Row(children: [
+            Text('Historique (${logs.length})', style: Theme.of(context).textTheme.titleSmall),
+            const Spacer(),
+            ElevatedButton.icon(
+              onPressed: () => _showAddEmotionSheet(context, ref, personId),
+              icon: const Icon(Icons.add_chart_rounded, size: 14),
+              label: const Text('Logger'),
+              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+            ),
+          ]),
+          const SizedBox(height: 16),
+          if (logs.isEmpty)
+            Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(children: [
+              const Icon(Icons.mood_rounded, size: 48, color: AppColors.textMuted),
               const SizedBox(height: 12),
-              SizedBox(height: 140, child: _EmotionChart(logs: logs)),
-              const SizedBox(height: 20),
-            ],
-            Row(children: [
-              Text('Historique (${logs.length})', style: Theme.of(context).textTheme.titleSmall),
-              const Spacer(),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, size: 14),
-                label: const Text('Logger'),
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-              ),
-            ]),
-            const SizedBox(height: 12),
-            if (logs.isEmpty)
-              Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(children: [
-                const Text('💫', style: TextStyle(fontSize: 40)),
-                const SizedBox(height: 8),
-                Text('Aucune émotion enregistrée', style: Theme.of(context).textTheme.bodyMedium),
-              ])))
-            else
-              ...logs.map((log) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+              Text('Aucune émotion enregistrée', style: Theme.of(context).textTheme.bodyMedium),
+            ])))
+          else
+            ...logs.map((log) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
                 child: Row(children: [
                   EmotionChip(emotion: log.emotion, intensity: log.intensity),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(log.note ?? log.context ?? '', style: Theme.of(context).textTheme.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(log.note ?? log.context ?? '', style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis)),
-                  Text(DateFormat('dd/MM', 'fr_FR').format(log.date), style: Theme.of(context).textTheme.bodySmall),
+                  Text(DateFormat('dd/MM', 'fr_FR').format(log.date), style: Theme.of(context).textTheme.labelSmall),
                 ]),
-              )),
-          ],
-        );
-      },
+              ),
+            )),
+        ],
+      ),
+    );
+  }
+
+  void _showAddEmotionSheet(BuildContext context, WidgetRef ref, int personId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => _AddEmotionSheet(
+        personId: personId,
+        onSave: (log) async {
+          await ref.read(personEmotionsProvider(personId).notifier).addEmotion(log);
+          if (context.mounted) Navigator.pop(ctx);
+        },
+      ),
     );
   }
 }
@@ -337,7 +435,7 @@ class _EmotionChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spots = logs.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.intensity.toDouble())).toList();
+    final spots = logs.reversed.toList().asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.intensity.toDouble())).toList();
     return LineChart(LineChartData(
       gridData: const FlGridData(show: false),
       titlesData: const FlTitlesData(show: false),
@@ -347,8 +445,8 @@ class _EmotionChart extends StatelessWidget {
         spots: spots,
         isCurved: true,
         color: AppColors.secondary,
-        barWidth: 2.5,
-        dotData: const FlDotData(show: false),
+        barWidth: 3,
+        dotData: const FlDotData(show: true),
         belowBarData: BarAreaData(show: true, color: AppColors.secondary.withValues(alpha: 0.1)),
       )],
     ));
@@ -356,42 +454,66 @@ class _EmotionChart extends StatelessWidget {
 }
 
 // ── Interactions Tab ──────────────────────────────────────────────────────────
-class _InteractionsTab extends StatelessWidget {
+class _InteractionsTab extends ConsumerWidget {
   final int personId;
   const _InteractionsTab({required this.personId});
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<Interaction>>(
-      future: InteractionRepository().getInteractionsForPerson(personId),
-      builder: (context, snapshot) {
-        final interactions = snapshot.data ?? [];
-        return ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Row(children: [
-              Text('${interactions.length} interactions', style: Theme.of(context).textTheme.bodyMedium),
-              const Spacer(),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, size: 14),
-                label: const Text('Ajouter'),
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-              ),
-            ]),
-            const SizedBox(height: 16),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final interactionsAsync = ref.watch(personInteractionsProvider(personId));
+
+    return interactionsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      error: (e, _) => Center(child: Text('$e')),
+      data: (interactions) => ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Row(children: [
+            Text('${interactions.length} interactions', style: Theme.of(context).textTheme.titleSmall),
+            const Spacer(),
+            ElevatedButton.icon(
+              onPressed: () => _showAddInteractionSheet(context, ref, personId),
+              icon: const Icon(Icons.add_comment_rounded, size: 14),
+              label: const Text('Ajouter'),
+              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+            ),
+          ]),
+          const SizedBox(height: 20),
+          if (interactions.isEmpty)
+             Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(children: [
+              const Icon(Icons.chat_bubble_outline_rounded, size: 48, color: AppColors.textMuted),
+              const SizedBox(height: 12),
+              Text('Aucune interaction récente', style: Theme.of(context).textTheme.bodyMedium),
+            ])))
+          else
             RelationTimeline(interactions: interactions),
-          ],
-        );
-      },
+        ],
+      ),
+    );
+  }
+
+  void _showAddInteractionSheet(BuildContext context, WidgetRef ref, int personId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => _AddInteractionSheet(
+        personId: personId,
+        onSave: (interaction) async {
+          await ref.read(personInteractionsProvider(personId).notifier).addInteraction(interaction);
+          if (context.mounted) Navigator.pop(ctx);
+        },
+      ),
     );
   }
 }
 
 // ── Relation Tab ──────────────────────────────────────────────────────────────
 class _RelationTab extends StatelessWidget {
+  final int personId;
   final AsyncValue<RelationshipScore> scoreAsync;
-  const _RelationTab({required this.scoreAsync});
+  const _RelationTab({required this.personId, required this.scoreAsync});
 
   @override
   Widget build(BuildContext context) {
@@ -401,20 +523,30 @@ class _RelationTab extends StatelessWidget {
       data: (score) => ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Center(child: ScoreGauge(score: score.score, label: 'Score global', size: 180)),
-          const SizedBox(height: 32),
-          Text('Détail', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 16),
-          _ScoreBar(label: '🔐 Confiance', value: score.trustLevel, color: AppColors.primary),
-          const SizedBox(height: 12),
-          _ScoreBar(label: '💬 Communication', value: score.communicationLevel, color: AppColors.accent),
-          const SizedBox(height: 12),
-          _ScoreBar(label: '🫀 Proximité émotionnelle', value: score.emotionalCloseness, color: AppColors.secondary),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.divider)),
+            child: Column(
+              children: [
+                ScoreGauge(score: score.score, label: 'Santé de la relation', size: 160),
+                const SizedBox(height: 24),
+                Text('Score global de connexion', style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
           const SizedBox(height: 24),
+          Text('Détails par piliers', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 16),
+          _ScoreBar(icon: Icons.lock_outline_rounded, label: 'Confiance', value: score.trustLevel, color: AppColors.primary),
+          const SizedBox(height: 16),
+          _ScoreBar(icon: Icons.chat_bubble_outline_rounded, label: 'Communication', value: score.communicationLevel, color: AppColors.accent),
+          const SizedBox(height: 16),
+          _ScoreBar(icon: Icons.favorite_border_rounded, label: 'Proximité émotionnelle', value: score.emotionalCloseness, color: AppColors.secondary),
+          const SizedBox(height: 32),
           Text('Dernière évaluation : ${DateFormat('dd MMM yyyy', 'fr_FR').format(score.lastEvaluated)}',
             style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
           const SizedBox(height: 20),
-          ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.refresh_rounded, size: 16), label: const Text('Réévaluer')),
+          ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.refresh_rounded, size: 16), label: const Text('Réévaluer maintenant')),
         ],
       ),
     );
@@ -422,27 +554,266 @@ class _RelationTab extends StatelessWidget {
 }
 
 class _ScoreBar extends StatelessWidget {
+  final IconData icon;
   final String label;
   final double value;
   final Color color;
-  const _ScoreBar({required this.label, required this.value, required this.color});
+  const _ScoreBar({required this.icon, required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          const Spacer(),
-          Text('${value.toInt()}%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
-        ]),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(value: value / 100, minHeight: 8, backgroundColor: color.withValues(alpha: 0.15), valueColor: AlwaysStoppedAnimation<Color>(color)),
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.divider)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 8),
+            Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+            const Spacer(),
+            Text('${value.toInt()}%', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: color)),
+          ]),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(value: value / 100, minHeight: 8, backgroundColor: color.withValues(alpha: 0.1), valueColor: AlwaysStoppedAnimation<Color>(color)),
+          ),
+        ],
+      ),
     );
+  }
+}
+
+// ── CRUD Sheets ────────────────────────────────────────────────────────────────
+
+class _AddContextSheet extends StatefulWidget {
+  final int personId;
+  final Function(ContextEntry) onSave;
+  const _AddContextSheet({required this.personId, required this.onSave});
+
+  @override
+  State<_AddContextSheet> createState() => _AddContextSheetState();
+}
+
+class _AddContextSheetState extends State<_AddContextSheet> {
+  final _contentController = TextEditingController();
+  String _selectedCategory = 'général';
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Nouveau contexte', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          children: ['général', 'travail', 'famille', 'loisir', 'secret'].map((cat) => GestureDetector(
+            onTap: () => setState(() => _selectedCategory = cat),
+            child: Chip(
+              label: Text(cat),
+              backgroundColor: _selectedCategory == cat ? AppColors.primary.withValues(alpha: 0.2) : AppColors.surface2,
+              side: BorderSide(color: _selectedCategory == cat ? AppColors.primary : AppColors.divider),
+            ),
+          )).toList(),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _contentController,
+          maxLines: 3,
+          decoration: const InputDecoration(hintText: 'Notes sur le contexte...', border: OutlineInputBorder()),
+        ),
+        const SizedBox(height: 20),
+        SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
+          if (_contentController.text.isEmpty) return;
+          final entry = ContextEntry()
+            ..personId = widget.personId
+            ..category = _selectedCategory
+            ..title = _contentController.text.split('\n').first
+            ..description = _contentController.text
+            ..importance = 3
+            ..date = DateTime.now()
+            ..createdAt = DateTime.now();
+          widget.onSave(entry);
+        }, child: const Text('Sauvegarder'))),
+      ]),
+    );
+  }
+}
+
+class _AddEmotionSheet extends StatefulWidget {
+  final int personId;
+  final Function(EmotionLog) onSave;
+  const _AddEmotionSheet({required this.personId, required this.onSave});
+
+  @override
+  State<_AddEmotionSheet> createState() => _AddEmotionSheetState();
+}
+
+class _AddEmotionSheetState extends State<_AddEmotionSheet> {
+  String _selectedEmotion = 'Joie';
+  double _intensity = 5;
+  final _noteController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Log d\'émotion', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          children: ['Joie', 'Colère', 'Tristesse', 'Peur', 'Surprise', 'Dégoût', 'Amour'].map((e) => GestureDetector(
+            onTap: () => setState(() => _selectedEmotion = e),
+            child: Chip(
+              label: Text(e),
+              backgroundColor: _selectedEmotion == e ? AppColors.secondary.withValues(alpha: 0.2) : AppColors.surface2,
+              side: BorderSide(color: _selectedEmotion == e ? AppColors.secondary : AppColors.divider),
+            ),
+          )).toList(),
+        ),
+        const SizedBox(height: 20),
+        Text('Intensité : ${_intensity.toInt()}/10'),
+        Slider(value: _intensity, min: 1, max: 10, divisions: 9, activeColor: AppColors.secondary, onChanged: (v) => setState(() => _intensity = v)),
+        const SizedBox(height: 16),
+        TextField(controller: _noteController, decoration: const InputDecoration(hintText: 'Une note ?', border: OutlineInputBorder())),
+        const SizedBox(height: 20),
+        SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
+          final log = EmotionLog()
+            ..personId = widget.personId
+            ..emotion = _selectedEmotion
+            ..intensity = _intensity.toInt()
+            ..note = _noteController.text
+            ..date = DateTime.now();
+          widget.onSave(log);
+        }, child: const Text('Logger'))),
+      ]),
+    );
+  }
+}
+
+class _AddInteractionSheet extends StatefulWidget {
+  final int personId;
+  final Function(Interaction) onSave;
+  const _AddInteractionSheet({required this.personId, required this.onSave});
+
+  @override
+  State<_AddInteractionSheet> createState() => _AddInteractionSheetState();
+}
+
+class _AddInteractionSheetState extends State<_AddInteractionSheet> {
+  String _type = 'Appel';
+  final _summaryController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Nouvelle interaction', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          children: ['Appel', 'Message', 'Rencontre', 'Cadeau', 'Autre'].map((t) => GestureDetector(
+            onTap: () => setState(() => _type = t),
+            child: Chip(
+              label: Text(t),
+              backgroundColor: _type == t ? AppColors.primary.withValues(alpha: 0.2) : AppColors.surface2,
+            ),
+          )).toList(),
+        ),
+        const SizedBox(height: 16),
+        TextField(controller: _summaryController, maxLines: 2, decoration: const InputDecoration(hintText: 'Résumé...', border: OutlineInputBorder())),
+        const SizedBox(height: 20),
+        SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
+          final interaction = Interaction()
+            ..personId = widget.personId
+            ..type = _type
+            ..summary = _summaryController.text
+            ..qualityScore = 5
+            ..date = DateTime.now()
+            ..createdAt = DateTime.now();
+          widget.onSave(interaction);
+        }, child: const Text('Ajouter'))),
+      ]),
+    );
+  }
+}
+
+class _EditProfileSheet extends StatefulWidget {
+  final int personId;
+  final Profile? profile;
+  final Function(Profile) onSave;
+  const _EditProfileSheet({required this.personId, this.profile, required this.onSave});
+
+  @override
+  State<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends State<_EditProfileSheet> {
+  late Profile _current;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.profile ?? (Profile()..personId = widget.personId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Modifier le profil (Âme)', style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 20),
+          _buildListEditor('Désirs', _current.desires, (val) => setState(() => _current.desires = val)),
+          _buildListEditor('Rêves', _current.dreams, (val) => setState(() => _current.dreams = val)),
+          _buildListEditor('Peurs', _current.fears, (val) => setState(() => _current.fears = val)),
+          _buildListEditor('Loves', _current.loves, (val) => setState(() => _current.loves = val)),
+          _buildListEditor('Values', _current.values, (val) => setState(() => _current.values = val)),
+          const SizedBox(height: 24),
+          SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () => widget.onSave(_current), child: const Text('Tout sauvegarder'))),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildListEditor(String title, List<String> items, Function(List<String>) onChanged) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 8),
+      Wrap(spacing: 8, children: [
+        ...items.map((item) => Chip(
+          label: Text(item, style: const TextStyle(fontSize: 12)),
+          onDeleted: () {
+            final newList = List<String>.from(items)..remove(item);
+            onChanged(newList);
+          },
+        )),
+        ActionChip(label: const Icon(Icons.add, size: 14), onPressed: () => _showAddItemDialog(title, items, onChanged)),
+      ]),
+      const SizedBox(height: 16),
+    ]);
+  }
+
+  void _showAddItemDialog(String title, List<String> items, Function(List<String>) onChanged) {
+    final controller = TextEditingController();
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      title: Text('Ajouter : $title'),
+      content: TextField(controller: controller, autofocus: true),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+        TextButton(onPressed: () {
+          if (controller.text.isNotEmpty) {
+            onChanged(List<String>.from(items)..add(controller.text));
+          }
+          Navigator.pop(ctx);
+        }, child: const Text('Ajouter')),
+      ],
+    ));
   }
 }

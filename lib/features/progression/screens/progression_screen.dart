@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/person.dart';
 import '../../../data/repositories/person_repository.dart';
 import '../../../shared/widgets/insight_card.dart';
+import '../../../core/utils/icon_utils.dart';
 
 class ProgressionScreen extends ConsumerWidget {
   const ProgressionScreen({super.key});
@@ -59,6 +60,7 @@ class ProgressionScreen extends ConsumerWidget {
               future: PersonRepository().getOrCreateScore(person.id),
               builder: (context, snapshot) {
                 final score = snapshot.data?.score ?? 50;
+                final color = _relationColor(person);
                 return GestureDetector(
                   onTap: () => context.push('/persons/${person.id}'),
                   child: Container(
@@ -69,22 +71,26 @@ class ProgressionScreen extends ConsumerWidget {
                       border: Border.all(color: AppColors.divider),
                     ),
                     child: Row(children: [
-                      Text(person.avatarEmoji, style: const TextStyle(fontSize: 28)),
+                      Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+                        child: Center(child: Icon(IconUtils.getIconForRelation(person.relationType.name), color: color, size: 22)),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(person.name, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: score / 100, minHeight: 6,
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            backgroundColor: color.withValues(alpha: 0.1),
+                            valueColor: AlwaysStoppedAnimation<Color>(color),
                           ),
                         ),
                       ])),
                       const SizedBox(width: 12),
-                      Text('${score.toInt()}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                      Text('${score.toInt()}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color)),
                     ]),
                   ).animate().fadeIn(duration: 300.ms).slideX(begin: 0.05),
                 );
@@ -94,6 +100,17 @@ class ProgressionScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Color _relationColor(Person person) {
+    switch (person.relationType) {
+      case RelationType.ami: return AppColors.relationFriend;
+      case RelationType.famille: return AppColors.relationFamily;
+      case RelationType.partenaire: return AppColors.relationPartner;
+      case RelationType.collegue: return AppColors.relationColleague;
+      case RelationType.mentor: return AppColors.relationMentor;
+      default: return AppColors.relationOther;
+    }
   }
 
   Widget _buildInteractionHeatmap(BuildContext context) {
@@ -160,11 +177,11 @@ class ProgressionScreen extends ConsumerWidget {
         children: [
           Text('Insights', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 14),
-          InsightCard(emoji: '📊', title: 'Analyse de tes relations', body: 'Continue d\'enrichir tes profils pour obtenir des insights personnalisés.', color: AppColors.primary),
+          InsightCard(icon: Icons.analytics_outlined, title: 'Analyse de tes relations', body: 'Continue d\'enrichir tes profils pour obtenir des insights personnalisés.', color: AppColors.primary),
           const SizedBox(height: 10),
-          InsightCard(emoji: '🔥', title: 'Maintiens tes habitudes', body: 'La régularité construit de grandes choses. Continue chaque jour.', color: AppColors.accent),
+          InsightCard(icon: Icons.local_fire_department_rounded, title: 'Maintiens tes habitudes', body: 'La régularité construit de grandes choses. Continue chaque jour.', color: AppColors.accent),
           const SizedBox(height: 10),
-          InsightCard(emoji: '💬', title: 'Prends des nouvelles', body: 'Certaines personnes n\'ont pas eu d\'interactions récentes.', color: AppColors.secondary),
+          InsightCard(icon: Icons.chat_bubble_outline_rounded, title: 'Prends des nouvelles', body: 'Certaines personnes n\'ont pas eu d\'interactions récentes.', color: AppColors.secondary),
         ],
       ).animate().fadeIn(duration: 400.ms, delay: 300.ms),
     );
@@ -180,7 +197,7 @@ class _EmptyProgression extends StatelessWidget {
     return Center(child: Padding(
       padding: const EdgeInsets.all(40),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Text('📊', style: TextStyle(fontSize: 56)),
+        const Icon(Icons.analytics_outlined, size: 56, color: AppColors.textMuted),
         const SizedBox(height: 16),
         Text('Aucune donnée', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 8),

@@ -2,7 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/person.dart';
 import '../../../data/models/profile.dart';
 import '../../../data/models/relationship_score.dart';
+import '../../../data/models/context_entry.dart';
+import '../../../data/models/emotion_log.dart';
+import '../../../data/models/interaction.dart';
 import '../../../data/repositories/person_repository.dart';
+import '../../../data/repositories/context_repository.dart';
+import '../../../data/repositories/emotion_repository.dart';
+import '../../../data/repositories/interaction_repository.dart';
 
 final personRepositoryProvider = Provider<PersonRepository>((ref) {
   return PersonRepository();
@@ -47,18 +53,97 @@ final personDetailProvider = FutureProvider.family<Person?, int>((ref, id) async
   return repo.getPersonById(id);
 });
 
-final personProfileProvider = FutureProvider.family<Profile?, int>((ref, personId) async {
-  final repo = ref.read(personRepositoryProvider);
-  return repo.getProfileByPersonId(personId);
-});
+final personProfileProvider = AsyncNotifierProvider.family<PersonProfileNotifier, Profile?, int>(
+  PersonProfileNotifier.new,
+);
 
-final personScoreProvider = FutureProvider.family<RelationshipScore, int>((ref, personId) async {
-  final repo = ref.read(personRepositoryProvider);
-  return repo.getOrCreateScore(personId);
-});
+class PersonProfileNotifier extends FamilyAsyncNotifier<Profile?, int> {
+  PersonRepository get _repo => ref.read(personRepositoryProvider);
+
+  @override
+  Future<Profile?> build(int arg) async {
+    return await _repo.getProfileByPersonId(arg);
+  }
+
+  Future<void> saveProfile(Profile profile) async {
+    await _repo.saveProfile(profile);
+    state = AsyncData(profile);
+  }
+}
+
+final personScoreProvider = AsyncNotifierProvider.family<PersonScoreNotifier, RelationshipScore, int>(
+  PersonScoreNotifier.new,
+);
+
+class PersonScoreNotifier extends FamilyAsyncNotifier<RelationshipScore, int> {
+  PersonRepository get _repo => ref.read(personRepositoryProvider);
+
+  @override
+  Future<RelationshipScore> build(int arg) async {
+    return await _repo.getOrCreateScore(arg);
+  }
+
+  Future<void> updateScore(RelationshipScore score) async {
+    await _repo.saveScore(score);
+    state = AsyncData(score);
+  }
+}
 
 final filteredPersonsProvider = FutureProvider.family<List<Person>, RelationType?>((ref, type) async {
   final repo = ref.read(personRepositoryProvider);
   if (type == null) return repo.getAllPersons();
   return repo.getPersonsByRelationType(type);
 });
+
+final personContextsProvider = AsyncNotifierProvider.family<PersonContextsNotifier, List<ContextEntry>, int>(
+  PersonContextsNotifier.new,
+);
+
+class PersonContextsNotifier extends FamilyAsyncNotifier<List<ContextEntry>, int> {
+  @override
+  Future<List<ContextEntry>> build(int arg) async {
+    return await ContextRepository().getContextsForPerson(arg);
+  }
+
+  Future<void> addContext(ContextEntry entry) async {
+    await ContextRepository().saveContext(entry);
+    ref.invalidateSelf();
+  }
+
+  Future<void> deleteContext(int id) async {
+    await ContextRepository().deleteContext(id);
+    ref.invalidateSelf();
+  }
+}
+
+final personEmotionsProvider = AsyncNotifierProvider.family<PersonEmotionsNotifier, List<EmotionLog>, int>(
+  PersonEmotionsNotifier.new,
+);
+
+class PersonEmotionsNotifier extends FamilyAsyncNotifier<List<EmotionLog>, int> {
+  @override
+  Future<List<EmotionLog>> build(int arg) async {
+    return await EmotionRepository().getRecentEmotions(arg, limit: 50);
+  }
+
+  Future<void> addEmotion(EmotionLog log) async {
+    await EmotionRepository().saveEmotion(log);
+    ref.invalidateSelf();
+  }
+}
+
+final personInteractionsProvider = AsyncNotifierProvider.family<PersonInteractionsNotifier, List<Interaction>, int>(
+  PersonInteractionsNotifier.new,
+);
+
+class PersonInteractionsNotifier extends FamilyAsyncNotifier<List<Interaction>, int> {
+  @override
+  Future<List<Interaction>> build(int arg) async {
+    return await InteractionRepository().getInteractionsForPerson(arg);
+  }
+
+  Future<void> addInteraction(Interaction interaction) async {
+    await InteractionRepository().saveInteraction(interaction);
+    ref.invalidateSelf();
+  }
+}

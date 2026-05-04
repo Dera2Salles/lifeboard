@@ -25,12 +25,12 @@ class ScoreGauge extends StatelessWidget {
     return AppColors.error;
   }
 
-  String get _emoji {
-    if (score >= 80) return '🌟';
-    if (score >= 60) return '💚';
-    if (score >= 40) return '💛';
-    if (score >= 20) return '🧡';
-    return '❤️‍🩹';
+  IconData get _icon {
+    if (score >= 80) return Icons.auto_awesome_rounded;
+    if (score >= 60) return Icons.favorite_rounded;
+    if (score >= 40) return Icons.sentiment_satisfied_rounded;
+    if (score >= 20) return Icons.sentiment_neutral_rounded;
+    return Icons.sentiment_very_dissatisfied_rounded;
   }
 
   String get _statusLabel {
@@ -58,18 +58,19 @@ class ScoreGauge extends StatelessWidget {
           ],
           child: SizedBox(
             width: size,
-            height: size * 0.7,
+            height: size * 0.85, // Increased from 0.7 to prevent overflow
             child: CustomPaint(
               painter: _GaugePainter(
                 progress: score / 100,
                 color: _color,
               ),
               child: Align(
-                alignment: const Alignment(0, 0.8),
+                alignment: const Alignment(0, 0.6), // Adjusted alignment
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_emoji, style: TextStyle(fontSize: size * 0.18)),
+                    Icon(_icon, size: size * 0.18, color: _color),
+                    const SizedBox(height: 2),
                     Text(
                       '${score.toInt()}',
                       style: TextStyle(
@@ -93,7 +94,7 @@ class ScoreGauge extends StatelessWidget {
           ),
         ),
         if (label != null) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             label!,
             style: Theme.of(context).textTheme.labelMedium,
@@ -112,7 +113,7 @@ class _GaugePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height * 0.9);
+    final center = Offset(size.width / 2, size.height * 0.75); // Moved up
     final radius = size.width / 2 - 10;
     const strokeWidth = 12.0;
 
@@ -149,21 +150,6 @@ class _GaugePainter extends CustomPainter {
         tickPaint,
       );
     }
-
-    // Glow background
-    final glowPaint = Paint()
-      ..color = color.withValues(alpha: 0.08)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth + 8
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      math.pi,
-      math.pi * progress,
-      false,
-      glowPaint,
-    );
 
     // Progress arc
     final fgPaint = Paint()

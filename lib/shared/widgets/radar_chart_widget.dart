@@ -121,8 +121,8 @@ class _EmptyRadar extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('🧠', style: TextStyle(fontSize: 32)),
-              const SizedBox(height: 8),
+              const Icon(Icons.psychology_outlined, size: 36, color: AppColors.textMuted),
+              const SizedBox(height: 12),
               Text(
                 'Profil vide\nAjoute des informations',
                 style: Theme.of(context).textTheme.bodySmall,

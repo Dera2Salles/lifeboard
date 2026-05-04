@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/habit.dart';
 import '../../../shared/widgets/habit_ring.dart';
+import '../../../core/utils/icon_utils.dart';
 
 class HabitsScreen extends ConsumerWidget {
   const HabitsScreen({super.key});
@@ -36,12 +37,12 @@ class HabitsScreen extends ConsumerWidget {
                 data: (habits) {
                   if (habits.isEmpty) return _EmptyHabits(onAdd: () => _showAddHabitSheet(context, ref));
                   final logs = todayLogsAsync.value ?? {};
-                  final completed = habits.where((h) => logs[h.id]?.completed == true).length;
+                  final completedCount = habits.where((h) => logs[h.id]?.completed == true).length;
 
                   return CustomScrollView(
                     slivers: [
                       // Progress header
-                      SliverToBoxAdapter(child: _buildProgressHeader(context, completed, habits.length).animate().fadeIn(delay: 100.ms)),
+                      SliverToBoxAdapter(child: _buildProgressHeader(context, completedCount, habits.length).animate().fadeIn(delay: 100.ms)),
                       // Today's rings
                       SliverToBoxAdapter(child: _buildTodayRings(context, habits, logs, ref).animate().fadeIn(delay: 150.ms)),
                       // All habits list
@@ -85,12 +86,12 @@ class HabitsScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.accent.withValues(alpha: 0.15), AppColors.surface],
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-          ),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(color: AppColors.accent.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))
+          ],
         ),
         child: Column(children: [
           Row(children: [
@@ -98,12 +99,12 @@ class HabitsScreen extends ConsumerWidget {
             const Spacer(),
             Text('${(ratio * 100).toInt()}%', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.accent)),
           ]),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: ratio, minHeight: 10,
-              backgroundColor: AppColors.accent.withValues(alpha: 0.15),
+              backgroundColor: AppColors.accent.withValues(alpha: 0.1),
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
             ),
           ),
@@ -128,7 +129,7 @@ class HabitsScreen extends ConsumerWidget {
               final habit = habits[i];
               final done = logs[habit.id]?.completed == true;
               return HabitRing(
-                icon: habit.icon,
+                icon: IconUtils.getIconForCategory(habit.category),
                 title: habit.title,
                 progress: done ? 1.0 : 0.0,
                 color: Color(habit.color),
@@ -181,10 +182,14 @@ class _HabitListTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: completed ? color.withValues(alpha: 0.1) : AppColors.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: completed ? color.withValues(alpha: 0.5) : AppColors.divider, width: completed ? 1.5 : 1),
+              border: Border.all(color: completed ? color.withValues(alpha: 0.4) : AppColors.divider, width: completed ? 1.5 : 1),
             ),
             child: Row(children: [
-              Text(habit.icon, style: const TextStyle(fontSize: 26)),
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                child: Center(child: Icon(IconUtils.getIconForCategory(habit.category), color: color, size: 24)),
+              ),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(habit.title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, decoration: completed ? TextDecoration.lineThrough : null)),
@@ -193,8 +198,14 @@ class _HabitListTile extends StatelessWidget {
               if (habit.streak > 0)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
-                  child: Text('🔥 ${habit.streak}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.warning)),
+                  decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.local_fire_department_rounded, size: 12, color: AppColors.warning),
+                      const SizedBox(width: 2),
+                      Text('${habit.streak}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.warning)),
+                    ],
+                  ),
                 ),
               const SizedBox(width: 10),
               AnimatedContainer(
@@ -225,10 +236,9 @@ class _AddHabitSheet extends StatefulWidget {
 
 class _AddHabitSheetState extends State<_AddHabitSheet> {
   final _titleController = TextEditingController();
-  String _selectedIcon = '⭐';
+  String _selectedCategory = 'santé';
   int _selectedColor = AppConstants.habitColors[0];
   String _selectedFrequency = 'daily';
-  final String _selectedCategory = 'autre';
 
   @override
   Widget build(BuildContext context) {
@@ -237,20 +247,17 @@ class _AddHabitSheetState extends State<_AddHabitSheet> {
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Nouvelle habitude', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 20),
-        // Icon & color row
+        // Category icon & color row
         Row(children: [
-          GestureDetector(
-            onTap: _pickIcon,
-            child: Container(
-              width: 56, height: 56,
-              decoration: BoxDecoration(color: Color(_selectedColor).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(14), border: Border.all(color: Color(_selectedColor).withValues(alpha: 0.5))),
-              child: Center(child: Text(_selectedIcon, style: const TextStyle(fontSize: 28))),
-            ),
+          Container(
+            width: 56, height: 56,
+            decoration: BoxDecoration(color: Color(_selectedColor).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: Color(_selectedColor).withValues(alpha: 0.3))),
+            child: Center(child: Icon(IconUtils.getIconForCategory(_selectedCategory), color: Color(_selectedColor), size: 28)),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: SizedBox(
-              height: 36,
+              height: 40,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: AppConstants.habitColors.length,
@@ -274,10 +281,37 @@ class _AddHabitSheetState extends State<_AddHabitSheet> {
             ),
           ),
         ]),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         TextField(controller: _titleController, decoration: const InputDecoration(hintText: 'Nom de l\'habitude', prefixIcon: Icon(Icons.edit_rounded))),
-        const SizedBox(height: 16),
-        // Frequency chips
+        const SizedBox(height: 20),
+        Text('Catégorie', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8, runSpacing: 8,
+          children: ['santé', 'travail', 'sport', 'lecture', 'méditation', 'social'].map((cat) => GestureDetector(
+            onTap: () => setState(() => _selectedCategory = cat),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _selectedCategory == cat ? AppColors.primary.withValues(alpha: 0.15) : AppColors.surface2,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _selectedCategory == cat ? AppColors.primary : AppColors.divider),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(IconUtils.getIconForCategory(cat), size: 16, color: _selectedCategory == cat ? AppColors.primary : AppColors.textSecondary),
+                  const SizedBox(width: 6),
+                  Text(cat[0].toUpperCase() + cat.substring(1), style: TextStyle(fontSize: 12, color: _selectedCategory == cat ? AppColors.primary : AppColors.textSecondary)),
+                ],
+              ),
+            ),
+          )).toList(),
+        ),
+        const SizedBox(height: 20),
+        Text('Fréquence', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           children: AppConstants.habitFrequencies.map((f) => GestureDetector(
@@ -286,7 +320,7 @@ class _AddHabitSheetState extends State<_AddHabitSheet> {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: _selectedFrequency == f ? AppColors.primary.withValues(alpha: 0.2) : AppColors.surface2,
+                color: _selectedFrequency == f ? AppColors.primary.withValues(alpha: 0.15) : AppColors.surface2,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: _selectedFrequency == f ? AppColors.primary : AppColors.divider),
               ),
@@ -294,7 +328,7 @@ class _AddHabitSheetState extends State<_AddHabitSheet> {
             ),
           )).toList(),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -302,7 +336,7 @@ class _AddHabitSheetState extends State<_AddHabitSheet> {
               if (_titleController.text.trim().isEmpty) return;
               final habit = Habit()
                 ..title = _titleController.text.trim()
-                ..icon = _selectedIcon
+                ..icon = '⭐' // Still stored but UI uses category icon
                 ..color = _selectedColor
                 ..frequency = _selectedFrequency
                 ..category = _selectedCategory
@@ -319,27 +353,6 @@ class _AddHabitSheetState extends State<_AddHabitSheet> {
       ]),
     );
   }
-
-  void _pickIcon() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Wrap(
-          spacing: 10, runSpacing: 10,
-          children: AppConstants.habitIcons.map((emoji) => GestureDetector(
-            onTap: () { setState(() => _selectedIcon = emoji); Navigator.pop(ctx); },
-            child: Container(
-              width: 52, height: 52,
-              decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(12)),
-              child: Center(child: Text(emoji, style: const TextStyle(fontSize: 26))),
-            ),
-          )).toList(),
-        ),
-      ),
-    );
-  }
 }
 
 class _EmptyHabits extends StatelessWidget {
@@ -349,7 +362,7 @@ class _EmptyHabits extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Text('🔄', style: TextStyle(fontSize: 56)),
+      const Icon(Icons.sync_rounded, size: 56, color: AppColors.textMuted),
       const SizedBox(height: 16),
       Text('Aucune habitude', style: Theme.of(context).textTheme.headlineSmall),
       const SizedBox(height: 8),

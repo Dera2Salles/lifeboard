@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/person.dart';
 import '../../data/models/relationship_score.dart';
+import '../../core/utils/icon_utils.dart';
 
 class PersonCard extends StatelessWidget {
   final Person person;
@@ -64,33 +65,29 @@ class PersonCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             child: Stack(
               children: [
-                // Left color accent
                 Positioned(
                   left: 0,
                   top: 0,
                   bottom: 0,
-                  child: Container(width: 3, color: _relationColor),
+                  child: Container(width: 4, color: _relationColor),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
                   child: Row(
                     children: [
-                      // Avatar
+                      // Avatar Icon
                       Container(
                         width: 52,
                         height: 52,
                         decoration: BoxDecoration(
-                          color: _relationColor.withValues(alpha: 0.15),
+                          color: _relationColor.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: _relationColor.withValues(alpha: 0.4),
-                            width: 2,
-                          ),
                         ),
                         child: Center(
-                          child: Text(
-                            person.avatarEmoji,
-                            style: const TextStyle(fontSize: 24),
+                          child: Icon(
+                            IconUtils.getIconForRelation(person.relationType.name),
+                            size: 26,
+                            color: _relationColor,
                           ),
                         ),
                       ),
@@ -115,7 +112,7 @@ class PersonCard extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: _relationColor.withValues(alpha: 0.15),
+                                    color: _relationColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -184,7 +181,7 @@ class _ScoreRing extends StatelessWidget {
         painter: _RingPainter(
           progress: score / 100,
           color: color,
-          backgroundColor: color.withValues(alpha: 0.15),
+          backgroundColor: color.withValues(alpha: 0.1),
         ),
       ),
     );
@@ -206,7 +203,7 @@ class _RingPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 3;
-    const strokeWidth = 3.0;
+    const strokeWidth = 3.5;
 
     final bgPaint = Paint()
       ..color = backgroundColor

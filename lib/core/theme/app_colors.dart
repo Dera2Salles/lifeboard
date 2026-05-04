@@ -52,37 +52,6 @@ abstract class AppColors {
   static const Color relationMentor = Color(0xFF6C63FF);
   static const Color relationOther = Color(0xFF8892B0);
 
-  // Gradient definitions
-  static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF6C63FF), Color(0xFF8F88FF)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  static const LinearGradient secondaryGradient = LinearGradient(
-    colors: [Color(0xFFFF6584), Color(0xFFFF8FA3)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  static const LinearGradient accentGradient = LinearGradient(
-    colors: [Color(0xFF43E97B), Color(0xFF38F9D7)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  static const LinearGradient backgroundGradient = LinearGradient(
-    colors: [Color(0xFF0F0F1A), Color(0xFF16213E)],
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-  );
-
-  static const LinearGradient cardGradient = LinearGradient(
-    colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
   // Divider
   static const Color divider = Color(0xFF2D3561);
 

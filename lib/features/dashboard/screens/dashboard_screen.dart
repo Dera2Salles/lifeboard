@@ -10,6 +10,7 @@ import '../../../shared/widgets/person_card.dart';
 import '../../../shared/widgets/habit_ring.dart';
 import '../../../shared/widgets/score_gauge.dart';
 import '../../../shared/widgets/insight_card.dart';
+import '../../../core/utils/icon_utils.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -26,35 +27,54 @@ class DashboardScreen extends ConsumerWidget {
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
           error: (e, _) => Center(child: Text('Erreur: $e')),
-          data: (data) => CustomScrollView(
-            slivers: [
-              // Header
-              SliverToBoxAdapter(
-                child: _buildHeader(context, data.greeting, selectedMood, ref),
-              ),
-              // Global score
-              SliverToBoxAdapter(
-                child: _buildGlobalScore(context, data.globalScore),
-              ),
-              // Mood selector
-              SliverToBoxAdapter(
-                child: _buildMoodSelector(context, selectedMood, ref),
-              ),
-              // Today's habits
-              if (data.todayHabits.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: _buildHabitsSection(context, data, ref),
-                ),
-              // Recent persons
-              SliverToBoxAdapter(
-                child: _buildPersonsSection(context, data, ref),
-              ),
-              // Insights
-              SliverToBoxAdapter(
-                child: _buildInsights(context),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
-            ],
+          data: (data) => LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 600;
+              return CustomScrollView(
+                slivers: [
+                  // Header
+                  SliverToBoxAdapter(
+                    child: _buildHeader(context, data.greeting, selectedMood, ref),
+                  ),
+                  // Global score & Mood (Responsive layout)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                      child: isWide 
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: _buildGlobalScoreContent(context, data.globalScore)),
+                              const SizedBox(width: 24),
+                              Expanded(child: _buildMoodSelectorContent(context, selectedMood, ref)),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              _buildGlobalScoreContent(context, data.globalScore),
+                              const SizedBox(height: 24),
+                              _buildMoodSelectorContent(context, selectedMood, ref),
+                            ],
+                          ),
+                    ),
+                  ),
+                  // Today's habits
+                  if (data.todayHabits.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: _buildHabitsSection(context, data, ref),
+                    ),
+                  // Recent persons
+                  SliverToBoxAdapter(
+                    child: _buildPersonsSection(context, data, ref),
+                  ),
+                  // Insights
+                  SliverToBoxAdapter(
+                    child: _buildInsights(context),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -89,16 +109,19 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ),
           GestureDetector(
-            onTap: () => {},
+            onTap: () => context.push('/my_profile'),
             child: Container(
-              width: 44,
-              height: 44,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
+                color: AppColors.primary,
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))
+                ]
               ),
               child: const Center(
-                child: Text('🧬', style: TextStyle(fontSize: 22)),
+                child: Icon(Icons.person_rounded, color: Colors.white, size: 26),
               ),
             ),
           ).animate().fadeIn(duration: 400.ms, delay: 200.ms),
@@ -107,118 +130,106 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildGlobalScore(BuildContext context, double score) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.primary.withValues(alpha: 0.15),
-              AppColors.surface,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          children: [
-            ScoreGauge(score: score, size: 120),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Score de Vie',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Basé sur tes relations et habitudes',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 16),
-                  _MetricRow(
-                    emoji: '👥',
-                    label: 'Relations',
-                    color: AppColors.primary,
-                  ),
-                  const SizedBox(height: 6),
-                  _MetricRow(
-                    emoji: '🔄',
-                    label: 'Habitudes',
-                    color: AppColors.accent,
-                  ),
-                ],
-              ),
+  Widget _buildGlobalScoreContent(BuildContext context, double score) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Row(
+        children: [
+          ScoreGauge(score: score, size: 110),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Score de Vie',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tes relations & habitudes',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                _MetricRow(
+                  icon: Icons.people_rounded,
+                  label: 'Relations',
+                  color: AppColors.primary,
+                ),
+                const SizedBox(height: 6),
+                _MetricRow(
+                  icon: Icons.sync_rounded,
+                  label: 'Habitudes',
+                  color: AppColors.accent,
+                ),
+              ],
             ),
-          ],
-        ),
-      ).animate().fadeIn(duration: 500.ms, delay: 150.ms),
-    );
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 500.ms, delay: 150.ms);
   }
 
-  Widget _buildMoodSelector(
+  Widget _buildMoodSelectorContent(
       BuildContext context, String? selectedMood, WidgetRef ref) {
     const moods = [
-      ('😄', 'Super'),
-      ('🙂', 'Bien'),
-      ('😐', 'Ok'),
-      ('😔', 'Pas top'),
-      ('😞', 'Mal'),
+      ('Super', Icons.sentiment_very_satisfied_rounded),
+      ('Bien', Icons.sentiment_satisfied_rounded),
+      ('Ok', Icons.sentiment_neutral_rounded),
+      ('Pas top', Icons.sentiment_dissatisfied_rounded),
+      ('Mal', Icons.sentiment_very_dissatisfied_rounded),
     ];
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Comment tu te sens ?',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: moods
-                .map(
-                  (m) => GestureDetector(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Comment te sens-tu ?',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: moods
+              .map(
+                (m) => Expanded(
+                  child: GestureDetector(
                     onTap: () =>
-                        ref.read(todayMoodProvider.notifier).state = m.$2,
+                        ref.read(todayMoodProvider.notifier).state = m.$1,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: selectedMood == m.$2
-                            ? AppColors.primary.withValues(alpha: 0.2)
+                        color: selectedMood == m.$1
+                            ? AppColors.primary.withValues(alpha: 0.15)
                             : AppColors.surface2,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: selectedMood == m.$2
+                          color: selectedMood == m.$1
                               ? AppColors.primary
                               : AppColors.divider,
-                          width: selectedMood == m.$2 ? 1.5 : 1,
                         ),
                       ),
                       child: Column(
                         children: [
-                          Text(m.$1,
-                              style: const TextStyle(fontSize: 24)),
-                          const SizedBox(height: 4),
+                          Icon(m.$2, size: 24, color: selectedMood == m.$1 ? AppColors.primary : AppColors.textSecondary),
+                          const SizedBox(height: 6),
                           Text(
-                            m.$2,
+                            m.$1,
                             style: TextStyle(
                               fontSize: 10,
-                              fontWeight: selectedMood == m.$2
+                              fontWeight: selectedMood == m.$1
                                   ? FontWeight.w700
                                   : FontWeight.w400,
-                              color: selectedMood == m.$2
+                              color: selectedMood == m.$1
                                   ? AppColors.primary
                                   : AppColors.textSecondary,
                             ),
@@ -227,11 +238,11 @@ class DashboardScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                )
-                .toList(),
-          ),
-        ],
-      ),
+                ),
+              )
+              .toList(),
+        ),
+      ],
     ).animate().fadeIn(duration: 400.ms, delay: 200.ms);
   }
 
@@ -241,7 +252,7 @@ class DashboardScreen extends ConsumerWidget {
     final done = data.completedToday;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -255,7 +266,7 @@ class DashboardScreen extends ConsumerWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: done == total
-                      ? AppColors.accent.withValues(alpha: 0.2)
+                      ? AppColors.accent.withValues(alpha: 0.15)
                       : AppColors.surface2,
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -282,9 +293,9 @@ class DashboardScreen extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final habit = data.todayHabits[index];
                 return HabitRing(
-                  icon: habit.icon,
+                  icon: IconUtils.getIconForCategory(habit.category),
                   title: habit.title,
-                  progress: 0.5, // Simplified — would use actual log
+                  progress: 0.5,
                   color: Color(habit.color),
                   streak: habit.streak,
                   size: 72,
@@ -302,7 +313,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget _buildPersonsSection(
       BuildContext context, DashboardData data, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -324,11 +335,11 @@ class DashboardScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Column(
                   children: [
-                    const Text('👥', style: TextStyle(fontSize: 36)),
-                    const SizedBox(height: 8),
+                    Icon(Icons.people_outline_rounded, size: 40, color: AppColors.textMuted),
+                    const SizedBox(height: 12),
                     Text('Ajoute des personnes à ta vie',
                         style: Theme.of(context).textTheme.bodyMedium),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     ElevatedButton.icon(
                       onPressed: () => context.push('/persons/add'),
                       icon: const Icon(Icons.add, size: 16),
@@ -360,14 +371,14 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _buildInsights(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Insights', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           InsightCard(
-            emoji: '💡',
+            icon: Icons.lightbulb_outline_rounded,
             title: 'Consacre du temps à tes proches',
             body:
                 'Tu n\'as pas eu d\'interaction avec certaines personnes depuis plus de 7 jours.',
@@ -375,7 +386,7 @@ class DashboardScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 10),
           InsightCard(
-            emoji: '🔥',
+            icon: Icons.local_fire_department_rounded,
             title: 'Ton streak continue !',
             body:
                 'Continue comme ça — la régularité est la clé de la progression.',
@@ -388,12 +399,12 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 class _MetricRow extends StatelessWidget {
-  final String emoji;
+  final IconData icon;
   final String label;
   final Color color;
 
   const _MetricRow({
-    required this.emoji,
+    required this.icon,
     required this.label,
     required this.color,
   });
@@ -402,8 +413,8 @@ class _MetricRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 13)),
-        const SizedBox(width: 6),
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 8),
         Text(
           label,
           style: TextStyle(

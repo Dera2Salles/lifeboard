@@ -4,7 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_colors.dart';
 
 class HabitRing extends StatelessWidget {
-  final String icon;
+  final IconData icon;
   final String title;
   final double progress; // 0.0 to 1.0
   final Color color;
@@ -56,18 +56,25 @@ class HabitRing extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      Icon(
                         icon,
-                        style: TextStyle(fontSize: size * 0.30),
+                        size: size * 0.35,
+                        color: completed ? color : AppColors.textSecondary,
                       ),
                       if (streak > 0) ...[
-                        Text(
-                          '🔥$streak',
-                          style: TextStyle(
-                            fontSize: size * 0.13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.warning,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.local_fire_department_rounded, size: size * 0.15, color: AppColors.warning),
+                            Text(
+                              '$streak',
+                              style: TextStyle(
+                                fontSize: size * 0.13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.warning,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ],
@@ -118,7 +125,7 @@ class _HabitRingPainter extends CustomPainter {
 
     // Background ring
     final bgPaint = Paint()
-      ..color = color.withValues(alpha: 0.15)
+      ..color = color.withValues(alpha: 0.1)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
     canvas.drawCircle(center, radius, bgPaint);
@@ -137,22 +144,6 @@ class _HabitRingPainter extends CustomPainter {
         2 * math.pi * progress,
         false,
         fgPaint,
-      );
-    }
-
-    // Glow if completed
-    if (completed) {
-      final glowPaint = Paint()
-        ..color = color.withValues(alpha: 0.2)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth + 4
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        -math.pi / 2,
-        2 * math.pi,
-        false,
-        glowPaint,
       );
     }
   }

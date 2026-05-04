@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
 class InsightCard extends StatelessWidget {
-  final String emoji;
+  final IconData icon;
   final String title;
   final String body;
   final Color? color;
@@ -10,7 +10,7 @@ class InsightCard extends StatelessWidget {
 
   const InsightCard({
     super.key,
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.body,
     this.color,
@@ -26,13 +26,16 @@ class InsightCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [c.withValues(alpha: 0.15), c.withValues(alpha: 0.05)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: c.withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: c.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,11 +44,11 @@ class InsightCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: c.withValues(alpha: 0.15),
+                color: c.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
-                child: Text(emoji, style: const TextStyle(fontSize: 22)),
+                child: Icon(icon, size: 24, color: c),
               ),
             ),
             const SizedBox(width: 12),

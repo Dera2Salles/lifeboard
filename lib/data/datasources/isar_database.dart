@@ -9,6 +9,7 @@ import '../models/relationship_score.dart';
 import '../models/habit.dart';
 import '../models/habit_log.dart';
 import '../models/goal.dart';
+import '../models/user.dart';
 
 class IsarDatabase {
   IsarDatabase._();
@@ -35,6 +36,7 @@ class IsarDatabase {
         HabitSchema,
         HabitLogSchema,
         GoalSchema,
+        UserSchema,
       ],
       directory: dir.path,
       name: 'lifeboard_db',
